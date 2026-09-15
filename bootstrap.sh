@@ -37,6 +37,70 @@ ask_secret() {
 
 as_user() { sudo -u "$USER_NAME" -H bash -lc "$1"; }
 
+usage() {
+  cat <<'TEXT'
+Usage : sudo bash bootstrap.sh [options]
+
+  --c VALEUR     jeton Claude Code      (aussi : --claude, --c=VALEUR)
+  --g VALEUR     jeton GitHub           (aussi : --github, --g=VALEUR)
+  -h, --help     ce message
+
+Trois façons de donner un jeton, de la plus sûre à la plus rapide :
+
+  1. Rien du tout      le script les demande au clavier, invisibles à la frappe
+  2. Un fichier        --c @/chemin/jeton-claude     (le fichier est lu, pas la
+                       ligne de commande : rien dans « ps », rien dans l'historique)
+  3. En clair          --c "sk-…"                   le plus rapide
+
+La troisième laisse le jeton dans « ps » le temps de l'installation et dans
+l'historique de ton shell ensuite. Sur une machine jetable à un seul
+utilisateur c'est un risque faible et assumé — le script te dira comment
+effacer l'historique à la fin.
+
+Les variables ADLAB_CLAUDE_TOKEN et ADLAB_GITHUB_TOKEN font la même chose que
+les options, sans passer par la ligne de commande.
+TEXT
+}
+
+# Un jeton donné par « @fichier » est lu dans le fichier : c'est le compromis
+# qui garde la rapidité d'une option sans l'exposition d'un argument.
+depuis_option() {
+  local valeur="$1"
+  if [[ "$valeur" == @* ]]; then
+    local fichier="${valeur#@}"
+    [[ -r "$fichier" ]] || die "fichier de jeton illisible : $fichier"
+    # Sans le saut de ligne final : il ferait partie de la valeur.
+    printf '%s' "$(<"$fichier")"
+  else
+    printf '%s' "$valeur"
+  fi
+}
+
+opt_claude=''
+opt_github=''
+en_clair=0
+
+while (($#)); do
+  case "$1" in
+    --c|--claude|-c)
+      [[ $# -ge 2 ]] || die "$1 attend une valeur"
+      [[ "$2" == @* ]] || en_clair=1
+      opt_claude="$(depuis_option "$2")"; shift 2 ;;
+    --c=*|--claude=*)
+      [[ "${1#*=}" == @* ]] || en_clair=1
+      opt_claude="$(depuis_option "${1#*=}")"; shift ;;
+    --g|--github|-g)
+      [[ $# -ge 2 ]] || die "$1 attend une valeur"
+      [[ "$2" == @* ]] || en_clair=1
+      opt_github="$(depuis_option "$2")"; shift 2 ;;
+    --g=*|--github=*)
+      [[ "${1#*=}" == @* ]] || en_clair=1
+      opt_github="$(depuis_option "${1#*=}")"; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; die "option inconnue : $1" ;;
+  esac
+done
+
 # ---------------------------------------------------------------- 0. contrôles
 
 [[ "$(id -u)" == 0 ]] || die 'à lancer en root (sudo bash bootstrap.sh)'
@@ -52,13 +116,16 @@ note "Jetons              $ENV_FILE et ~$USER_NAME/.git-credentials, en 0600"
 # ------------------------------------------------------------------ 1. jetons
 
 title 'Jetons'
-claude_token="${ADLAB_CLAUDE_TOKEN:-}"
-github_token="${ADLAB_GITHUB_TOKEN:-}"
+claude_token="${opt_claude:-${ADLAB_CLAUDE_TOKEN:-}}"
+github_token="${opt_github:-${ADLAB_GITHUB_TOKEN:-}}"
 [[ -n "$claude_token" ]] || claude_token="$(ask_secret 'Jeton Claude Code (invisible à la frappe)')"
 [[ -n "$github_token" ]] || github_token="$(ask_secret 'Jeton GitHub (invisible à la frappe)')"
 [[ -n "$claude_token" ]] || die 'jeton Claude Code vide'
 [[ -n "$github_token" ]] || die 'jeton GitHub vide'
 note 'Les deux jetons sont en mémoire ; ils ne seront ni affichés ni journalisés.'
+if ((en_clair)); then
+  note 'Un jeton est arrivé en clair sur la ligne de commande : voir le rappel à la fin.'
+fi
 
 # ----------------------------------------------------------------- 2. paquets
 
@@ -182,4 +249,16 @@ note "Arrêter la veille    sudo bash $REPO_DIR/install/service.sh stop"
 printf '\n'
 note 'La veille ne lancera un cycle que si WORK.md change dans le dépôt.'
 note 'Rien à faire sur cette machine : la consigne arrive par Git.'
+
+if ((en_clair)); then
+  title 'Un dernier geste'
+  say "Un jeton est passé en clair sur la ligne de commande. Il n'est plus dans"
+  say "« ps » — le script se termine — mais il est dans l'historique de ton"
+  say 'shell. Pour l’en sortir, dans le shell où tu as tapé la commande :'
+  printf '\n    history -d $((HISTCMD-1)) 2>/dev/null; history -c; history -w\n\n'
+  say 'La prochaine fois, « --c @/chemin/fichier » évite le problème à la source,'
+  say 'et « --c » sans valeur en environnement le demande au clavier.'
+  say 'Et de toute façon : ces jetons sont révocables, révoque-les quand la'
+  say 'machine part à la poubelle.'
+fi
 log 'BOOTSTRAP_OK'

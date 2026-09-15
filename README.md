@@ -13,7 +13,13 @@ curl -fsSLO https://raw.githubusercontent.com/daubercyanthony-dotcom/tools/main/
 sudo bash bootstrap.sh
 ```
 
-Il demande **deux jetons**, invisibles à la frappe :
+Ou en une seule ligne, sans rien taper :
+
+```bash
+sudo bash bootstrap.sh --c "jeton-claude" --g "jeton-github"
+```
+
+Il lui faut **deux jetons** :
 
 | Jeton | Ce qu'il sert à faire | Portée conseillée |
 |---|---|---|
@@ -27,10 +33,25 @@ veille attachée à systemd.
 
 Attendu à la fin : la ligne `BOOTSTRAP_OK`.
 
+### Trois façons de les donner
+
+| | Comment | Ce que ça coûte |
+|---|---|---|
+| **Au clavier** | `sudo bash bootstrap.sh` | rien ; invisible à la frappe, rien dans `ps`, rien dans l'historique |
+| **Par fichier** | `--c @/chemin/jeton --g @/chemin/autre` | rien non plus : c'est le fichier qui est lu, pas la ligne de commande |
+| **En clair** | `--c "…" --g "…"` | le plus rapide. Le jeton est visible dans `ps` le temps de l'installation, et reste dans l'historique de ton shell |
+
+Les variables `ADLAB_CLAUDE_TOKEN` et `ADLAB_GITHUB_TOKEN` font la même chose
+que les options sans passer par la ligne de commande.
+
+La troisième forme existe parce qu'elle est pratique, et le script ne fait pas
+semblant qu'elle est gratuite : quand un jeton arrive en clair, il te rappelle
+à la fin comment le sortir de l'historique. Sur une machine jetable à un seul
+utilisateur, dont les jetons sont dédiés et révocables, c'est un risque faible
+et assumé.
+
 ### Ce qu'il fait des jetons
 
-- Aucun n'est passé en argument — une ligne de commande se lit dans `ps`
-  depuis n'importe quel compte de la machine.
 - Aucun n'est affiché, ni au clavier, ni dans la sortie, ni dans le journal.
 - Le jeton GitHub va dans `~/.git-credentials` (0600) ; le jeton Claude dans
   `/etc/daubercy-lab/cycle.env` (0600, root), lu par systemd avant qu'il ne
