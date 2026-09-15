@@ -21,6 +21,13 @@ readonly ENV_FILE="$RUNTIME_DIR/cycle.env"
 log()   { printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"; }
 die()   { printf '\nERREUR : %s\n' "$*" >&2; exit 2; }
 title() { printf '\n== %s ==\n' "$*"; }
+say()   { printf '%s\n' "$*"; }
+
+# Sans ça, une commande qui échoue tue le script sur son seul message d'erreur
+# et « BOOTSTRAP_OK » manque à l'appel — ce qui se remarque si on lit la fin,
+# et pas du tout si on lit en diagonale. Le premier vrai passage a buté
+# exactement là-dessus : un helper non défini, sur la dernière ligne utile.
+trap 'printf "\nBOOTSTRAP_ECHEC : ligne %s, code %s. Rien de plus n'"'"'a été fait.\n" "$LINENO" "$?" >&2' ERR
 note()  { printf '  %s\n' "$*"; }
 
 # Lecture silencieuse depuis le terminal et non depuis l'entrée standard : le
