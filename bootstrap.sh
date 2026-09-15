@@ -116,7 +116,7 @@ command -v apt-get >/dev/null || die 'machine non Debian/Ubuntu : apt-get absent
 title 'Ce qui va être installé'
 note "Compte de travail   $USER_NAME, avec sudo sans mot de passe"
 note "Dépôt               $REPO_URL → $REPO_DIR"
-note 'Paquets             docker, compose, client PostgreSQL, python3-venv, openssl'
+note 'Paquets             curl, git, ca-certificates, sudo — et rien de plus'
 note 'Agent               Claude Code, lancé en veille par systemd'
 note "Jetons              $ENV_FILE et ~$USER_NAME/.git-credentials, en 0600"
 
@@ -137,19 +137,18 @@ fi
 # ----------------------------------------------------------------- 2. paquets
 
 title 'Paquets'
+# Le strict nécessaire pour cloner le dépôt et poser l'agent, et rien d'autre.
+# Docker, le client PostgreSQL, python3-venv, openssl : ce sont les prérequis
+# de la PLATEFORME, pas de cette amorce. C'est la session qui les installe,
+# avec le « sudo » qu'on lui donne plus bas, et c'est « install/socle.sh » qui
+# possède la liste. Deux listes de paquets pour la même machine finiraient par
+# diverger, et l'écart ne se verrait que sur une machine neuve, des semaines
+# plus tard.
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-# « docker-compose-plugin » n'existe pas dans Debian : le paquet qui fournit le
-# greffon « docker compose » v2 s'y appelle « docker-compose ». OBSERVÉ sur
-# trixie, où docker-compose 2.26.1-4 donne bien un « docker compose version ».
-apt-get install -y -qq \
-  curl git ca-certificates sudo \
-  docker.io docker-buildx docker-compose \
-  postgresql-client python3 python3-venv openssl >/dev/null
-docker compose version >/dev/null 2>&1 \
-  || die 'le greffon « docker compose » reste absent après installation'
-note "$(docker --version)"
-note "$(docker compose version)"
+apt-get install -y -qq curl git ca-certificates sudo >/dev/null
+note 'curl, git, ca-certificates, sudo'
+note 'Le reste appartient à la plateforme : la session l’installera elle-même.'
 
 # ------------------------------------------------------------------ 3. compte
 
@@ -160,12 +159,12 @@ else
   useradd --create-home --shell /bin/bash "$USER_NAME"
   note "$USER_NAME créé"
 fi
+# C'est CE droit qui rend l'amorce suffisante : la session installera tout le
+# reste elle-même. Sans lui, il faudrait tout prévoir ici, et on serait de
+# nouveau à deux endroits pour la même chose.
 printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$USER_NAME" >"/etc/sudoers.d/$USER_NAME"
 chmod 0440 "/etc/sudoers.d/$USER_NAME"
-usermod -aG docker "$USER_NAME"
-# L'appartenance au groupe ne prend effet qu'à la session suivante ; « sudo -i »
-# et le service systemd en ouvrent une neuve, donc le point est réglé pour eux.
-note 'sudo sans mot de passe, et membre du groupe docker'
+note 'sudo sans mot de passe — de quoi installer le reste sans repasser par ici'
 
 home="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 [[ -n "$home" ]] || die "pas de répertoire personnel pour $USER_NAME"

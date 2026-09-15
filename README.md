@@ -26,10 +26,16 @@ Il lui faut **deux jetons** :
 | **Claude Code** | faire tourner l'agent | obtenu par `claude setup-token` sur ton poste |
 | **GitHub** | cloner le dépôt privé et y pousser | *fine-grained*, ce seul dépôt, `Contents: read & write`, avec une date d'expiration |
 
-Puis, sans rien demander d'autre : les paquets (docker, compose, client
-PostgreSQL, python3-venv, openssl), le compte de travail avec `sudo` sans mot
-de passe, les identifiants Git, le clone du dépôt privé, Claude Code, et la
-veille attachée à systemd.
+Puis, sans rien demander d'autre : `curl git ca-certificates sudo`, le compte
+de travail avec `sudo` sans mot de passe, les identifiants Git, le clone du
+dépôt privé, Claude Code, et la veille attachée à systemd.
+
+**Ce script installe l'agent, pas la plateforme.** Docker, le client
+PostgreSQL, `python3-venv`, `openssl` sont les prérequis de la plateforme :
+c'est la session qui les installe, avec le `sudo` qu'on lui donne ici, et
+c'est `install/socle.sh` qui possède la liste. Deux listes de paquets pour la
+même machine finiraient par diverger, et l'écart ne se verrait que sur une
+machine neuve, des semaines plus tard.
 
 Attendu à la fin : la ligne `BOOTSTRAP_OK`.
 
