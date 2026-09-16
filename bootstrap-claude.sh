@@ -5,7 +5,7 @@
 # passé en argument (une ligne de commande se lit dans « ps »), aucun n'est
 # affiché, aucun n'atterrit dans l'historique du shell.
 #
-#   sudo bash bootstrap.sh
+#   sudo bash bootstrap-claude.sh
 #
 # À lancer en root sur une machine JETABLE. Il crée un compte avec « sudo »
 # sans mot de passe et y fait tourner un agent en régime non interactif : ça ne
@@ -46,7 +46,7 @@ as_user() { sudo -u "$USER_NAME" -H bash -lc "$1"; }
 
 usage() {
   cat <<'TEXT'
-Usage : sudo bash bootstrap.sh [options]
+Usage : sudo bash bootstrap-claude.sh [options]
 
   --c VALEUR     jeton Claude Code      (aussi : --claude, --c=VALEUR)
   --g VALEUR     jeton GitHub           (aussi : --github, --g=VALEUR)
@@ -110,7 +110,7 @@ done
 
 # ---------------------------------------------------------------- 0. contrôles
 
-[[ "$(id -u)" == 0 ]] || die 'à lancer en root (sudo bash bootstrap.sh)'
+[[ "$(id -u)" == 0 ]] || die 'à lancer en root (sudo bash bootstrap-claude.sh)'
 command -v apt-get >/dev/null || die 'machine non Debian/Ubuntu : apt-get absent'
 
 title 'Ce qui va être installé'

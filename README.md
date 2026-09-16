@@ -4,19 +4,29 @@ Ce qui doit être téléchargeable **sans identifiant**. Le reste de la
 plateforme vit dans un dépôt privé ; ce dépôt-ci ne contient que l'amorce, et
 aucun secret — c'est précisément pourquoi il peut être public.
 
-## `bootstrap.sh` — monter une machine de travail en une fois
+## Deux amorces, deux noms
+
+Ce script monte **la machine de travail de l'agent** : le compte, les quatre
+paquets dont il a besoin, le dépôt privé, Claude Code, la veille. Il n'installe
+pas le labo — le labo s'installe par `install/all.sh apply`, dans le dépôt
+privé, et pose lui-même ses propres prérequis Debian.
+
+Les deux s'appelaient « bootstrap » et se confondaient. Celui-ci s'appelle
+désormais `bootstrap-claude.sh` ; l'ancienne URL `bootstrap.sh` ne répond plus.
+
+## `bootstrap-claude.sh` — monter une machine de travail en une fois
 
 Sur une Debian fraîche, en root :
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/daubercyanthony-dotcom/tools/main/bootstrap.sh
-sudo bash bootstrap.sh
+curl -fsSLO https://raw.githubusercontent.com/daubercyanthony-dotcom/tools/main/bootstrap-claude.sh
+sudo bash bootstrap-claude.sh
 ```
 
 Ou en une seule ligne, sans rien taper :
 
 ```bash
-sudo bash bootstrap.sh --c "jeton-claude" --g "jeton-github"
+sudo bash bootstrap-claude.sh --c "jeton-claude" --g "jeton-github"
 ```
 
 Il lui faut **deux jetons** :
@@ -43,7 +53,7 @@ Attendu à la fin : la ligne `BOOTSTRAP_OK`.
 
 | | Comment | Ce que ça coûte |
 |---|---|---|
-| **Au clavier** | `sudo bash bootstrap.sh` | rien ; invisible à la frappe, rien dans `ps`, rien dans l'historique |
+| **Au clavier** | `sudo bash bootstrap-claude.sh` | rien ; invisible à la frappe, rien dans `ps`, rien dans l'historique |
 | **Par fichier** | `--c @/chemin/jeton --g @/chemin/autre` | rien non plus : c'est le fichier qui est lu, pas la ligne de commande |
 | **En clair** | `--c "…" --g "…"` | le plus rapide. Le jeton est visible dans `ps` le temps de l'installation, et reste dans l'historique de ton shell |
 
