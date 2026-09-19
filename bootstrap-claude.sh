@@ -117,7 +117,7 @@ title 'Ce qui va être installé'
 note "Compte de travail   $USER_NAME, avec sudo sans mot de passe"
 note "Dépôt               $REPO_URL → $REPO_DIR"
 note 'Paquets             curl, git, ca-certificates, sudo — et rien de plus'
-note 'Agent               Claude Code, lancé en veille par systemd'
+note 'Agent               Claude Code, lancé par le superviseur (systemd)'
 note "Jetons              $ENV_FILE et ~$USER_NAME/.git-credentials, en 0600"
 
 # ------------------------------------------------------------------ 1. jetons
@@ -235,7 +235,7 @@ note 'Jeton Claude Code accepté, réponse obtenue'
 
 # ------------------------------------------------------------- 7. le service
 
-title 'Veille'
+title 'Superviseur'
 install -d -m 0700 "$RUNTIME_DIR"
 temporary="$ENV_FILE.tmp"
 rm -f "$temporary"
@@ -246,15 +246,36 @@ note "jeton Claude dans $ENV_FILE, 0600, root seulement"
 
 unset claude_token github_token
 
-bash "$REPO_DIR/install/service.sh" apply
+# « superviseur.sh » et NON « service.sh » : ce dernier pose
+# « daubercy-cycle.service », la VEILLE, remplacée par le superviseur le
+# 2026-09-18. Une machine amorcée avec l'ancien script démarrait le lanceur
+# retiré — qui enchaîne les cycles SANS les faire relire.
+#
+# « apply » désactive la veille avant de poser son remplaçant : les deux
+# ensemble feraient deux lanceurs sur le même dépôt, donc deux arbres de
+# travail concurrents.
+bash "$REPO_DIR/install/superviseur.sh" apply
 
 title 'Terminé'
-note "Journal en direct    journalctl -fu daubercy-cycle.service"
-note "Contrôles            sudo bash $REPO_DIR/install/service.sh doctor"
-note "Arrêter la veille    sudo bash $REPO_DIR/install/service.sh stop"
+note "Journal en direct    journalctl -fu daubercy-superviseur.service"
+note "Contrôles            sudo bash $REPO_DIR/install/superviseur.sh doctor"
+note "Un tour, visible     sudo bash $REPO_DIR/install/superviseur.sh essai"
+note "Revenir à la veille  sudo bash $REPO_DIR/install/superviseur.sh revenir"
 printf '\n'
-note 'La veille ne lancera un cycle que si WORK.md change dans le dépôt.'
-note 'Rien à faire sur cette machine : la consigne arrive par Git.'
+note 'Le superviseur lit work/*.md, lance UN cycle, le fait relire, instruit'
+note 'les objections, puis passe au suivant. Les consignes arrivent par Git.'
+
+title 'Ce que cette amorce n’a PAS fait'
+say "Elle monte la machine de travail de l'agent. Elle n'installe pas le labo."
+printf '\n'
+note "Le labo               sudo bash $REPO_DIR/install/all.sh apply"
+note '                      PostgreSQL, la plateforme, la passerelle, Jenkins,'
+note '                      le panneau — et leurs prérequis Debian.'
+printf '\n'
+say 'Un étage mérite d’être nommé ici : « codex », le RELECTEUR que le'
+say 'superviseur appelle. Sans lui, la règle « sur revue absente : enchaîner »'
+say 's’applique à chaque cycle et le labo livre du code que personne n’a relu.'
+say 'Ça ne se voit dans aucun message d’erreur — c’est le comportement prévu.'
 
 if ((en_clair)); then
   title 'Un dernier geste'

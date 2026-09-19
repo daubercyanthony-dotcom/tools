@@ -7,9 +7,9 @@ aucun secret — c'est précisément pourquoi il peut être public.
 ## Deux amorces, deux noms
 
 Ce script monte **la machine de travail de l'agent** : le compte, les quatre
-paquets dont il a besoin, le dépôt privé, Claude Code, la veille. Il n'installe
-pas le labo — le labo s'installe par `install/all.sh apply`, dans le dépôt
-privé, et pose lui-même ses propres prérequis Debian.
+paquets dont il a besoin, le dépôt privé, Claude Code, le superviseur. Il
+n'installe pas le labo — le labo s'installe par `install/all.sh apply`, dans le
+dépôt privé, et pose lui-même ses propres prérequis Debian.
 
 Les deux s'appelaient « bootstrap » et se confondaient. Celui-ci s'appelle
 désormais `bootstrap-claude.sh` ; l'ancienne URL `bootstrap.sh` ne répond plus.
@@ -38,7 +38,7 @@ Il lui faut **deux jetons** :
 
 Puis, sans rien demander d'autre : `curl git ca-certificates sudo`, le compte
 de travail avec `sudo` sans mot de passe, les identifiants Git, le clone du
-dépôt privé, Claude Code, et la veille attachée à systemd.
+dépôt privé, Claude Code, et le superviseur attaché à systemd.
 
 **Ce script installe l'agent, pas la plateforme.** Docker, le client
 PostgreSQL, `python3-venv`, `openssl` sont les prérequis de la plateforme :
@@ -98,11 +98,29 @@ Enlève une seule de ces conditions et ce script n'est plus défendable.
 
 ## Après
 
-Rien à faire sur la machine. La veille surveille `WORK.md` dans le dépôt et
-lance un cycle dès que la consigne change — la consigne arrive par Git.
+Le superviseur lit `work/*.md` dans le dépôt, lance **un** cycle, le fait
+relire, instruit les objections, puis passe au suivant. Les consignes arrivent
+par Git.
 
 ```bash
-journalctl -fu daubercy-cycle.service          # suivre en direct
-sudo bash /opt/platform/install/service.sh doctor
-sudo bash /opt/platform/install/service.sh stop
+journalctl -fu daubercy-superviseur.service          # suivre en direct
+sudo bash /opt/platform/install/superviseur.sh doctor
+sudo bash /opt/platform/install/superviseur.sh essai      # un tour, visible
+sudo bash /opt/platform/install/superviseur.sh revenir    # retour à la veille
 ```
+
+Il a remplacé la veille (`daubercy-cycle.service`) le 2026-09-18 : celle-ci
+enchaînait les cycles **sans les faire relire**. Une unité `daubercy-cycle`
+en `failed` sur une machine à jour n'est pas une panne — c'est l'unité
+retirée.
+
+### Il reste le labo à installer
+
+```bash
+sudo bash /opt/platform/install/all.sh apply
+```
+
+Un étage mérite d'être nommé : **`codex`, le relecteur que le superviseur
+appelle**. Sans lui, la règle « sur revue absente : enchaîner » s'applique à
+chaque cycle, et le labo livre du code que personne n'a relu. Ça n'apparaît
+dans aucun message d'erreur : c'est le comportement prévu.
