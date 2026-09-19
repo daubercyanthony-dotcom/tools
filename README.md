@@ -6,10 +6,11 @@ aucun secret — c'est précisément pourquoi il peut être public.
 
 ## Deux amorces, deux noms
 
-Ce script monte **la machine de travail de l'agent** : le compte, les quatre
-paquets dont il a besoin, le dépôt privé, Claude Code, le superviseur. Il
-n'installe pas le labo — le labo s'installe par `install/all.sh apply`, dans le
-dépôt privé, et pose lui-même ses propres prérequis Debian.
+Ce script monte **l'usine** : le compte, les paquets dont elle a besoin, le
+dépôt privé, et les trois pièces qui la font tourner — **Claude Code** qui
+écrit, **codex** qui relit, **le superviseur** qui enchaîne. Il n'installe pas
+le labo — le labo s'installe par `install/all.sh apply`, dans le dépôt privé,
+et pose lui-même ses propres prérequis Debian.
 
 Les deux s'appelaient « bootstrap » et se confondaient. Celui-ci s'appelle
 désormais `bootstrap-claude.sh` ; l'ancienne URL `bootstrap.sh` ne répond plus.
@@ -36,9 +37,19 @@ Il lui faut **deux jetons** :
 | **Claude Code** | faire tourner l'agent | obtenu par `claude setup-token` sur ton poste |
 | **GitHub** | cloner le dépôt privé et y pousser | *fine-grained*, ce seul dépôt, `Contents: read & write`, avec une date d'expiration |
 
-Puis, sans rien demander d'autre : `curl git ca-certificates sudo`, le compte
-de travail avec `sudo` sans mot de passe, les identifiants Git, le clone du
-dépôt privé, Claude Code, et le superviseur attaché à systemd.
+Puis, sans rien demander d'autre : `curl git ca-certificates sudo npm`, le
+compte de travail avec `sudo` sans mot de passe, les identifiants Git, le
+clone du dépôt privé, Claude Code, le relecteur `codex` et son compte sans
+pouvoir, et le superviseur attaché à systemd.
+
+`npm` est la seule exception à la règle « rien que le strict nécessaire » :
+`codex` est un paquet npm, et le relecteur fait partie de l'usine que ce
+script monte. Ce n'est pas la liste de la plateforme qu'on recopie, c'est le
+prérequis de ce qu'on installe.
+
+**Un geste humain reste à faire, et un seul** : connecter le relecteur. Voir
+« Après », plus bas — tant qu'il n'est pas fait, le labo tourne sans
+relecture, sans erreur et sans avertissement.
 
 **Ce script installe l'agent, pas la plateforme.** Docker, le client
 PostgreSQL, `python3-venv`, `openssl` sont les prérequis de la plateforme :
@@ -96,11 +107,34 @@ production, et dont les jetons sont dédiés et révocables.
 
 Enlève une seule de ces conditions et ce script n'est plus défendable.
 
-## Après
+## Après — connecter le relecteur
+
+**C'est le seul geste que l'amorce ne peut pas faire.** `codex login
+--device-auth` affiche un code court qu'un humain approuve depuis un autre
+appareil : approuver un code, c'est prouver une identité, et un processus sans
+humain ne le fait pas. `install/codex.sh apply` prépare tout et **imprime la
+commande exacte** — avec le bon `CODEX_HOME` — à la fin de son passage.
+
+L'autorisation par code d'appareil doit être activée dans les réglages de
+sécurité du compte, sinon la commande refuse.
+
+Puis :
+
+```bash
+sudo bash /opt/platform/install/codex.sh doctor
+```
+
+Tant que ce geste n'est pas fait, la règle `sur_revue_absente = ENCHAINER`
+laisse passer **chaque** cycle sans relecture, sans erreur et sans
+avertissement. C'est le comportement prévu ; il n'apparaîtra dans aucun
+journal.
+
+## Après — la file
 
 Le superviseur lit `work/*.md` dans le dépôt, lance **un** cycle, le fait
 relire, instruit les objections, puis passe au suivant. Les consignes arrivent
-par Git.
+par Git. Ce qui a tourné descend dans `work/archive/` : `work/` ne porte que
+ce qui reste à faire, et c'est ce qu'une machine neuve lira.
 
 ```bash
 journalctl -fu daubercy-superviseur.service          # suivre en direct

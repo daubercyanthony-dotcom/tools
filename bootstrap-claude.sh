@@ -116,8 +116,10 @@ command -v apt-get >/dev/null || die 'machine non Debian/Ubuntu : apt-get absent
 title 'Ce qui va être installé'
 note "Compte de travail   $USER_NAME, avec sudo sans mot de passe"
 note "Dépôt               $REPO_URL → $REPO_DIR"
-note 'Paquets             curl, git, ca-certificates, sudo — et rien de plus'
-note 'Agent               Claude Code, lancé par le superviseur (systemd)'
+note 'Paquets             curl, git, ca-certificates, sudo, npm — et rien de plus'
+note 'Agent               Claude Code, celui qui écrit'
+note 'Relecteur           codex, celui qui relit — posé, à connecter à la main'
+note 'Lanceur             le superviseur, attaché à systemd'
 note "Jetons              $ENV_FILE et ~$USER_NAME/.git-credentials, en 0600"
 
 # ------------------------------------------------------------------ 1. jetons
@@ -144,10 +146,16 @@ title 'Paquets'
 # possède la liste. Deux listes de paquets pour la même machine finiraient par
 # diverger, et l'écart ne se verrait que sur une machine neuve, des semaines
 # plus tard.
+#
+# « npm » est l'exception, et elle est raisonnée : le relecteur « codex » est
+# un paquet npm (install/prerequis.sh le déclare ainsi), et le relecteur fait
+# partie de L'USINE, que cette amorce monte. Ce n'est pas la liste de la
+# plateforme qu'on recopie ici, c'est le prérequis de ce qu'on installe.
+# « nodejs » n'a pas à être nommé : « npm » en dépend.
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq curl git ca-certificates sudo >/dev/null
-note 'curl, git, ca-certificates, sudo'
+apt-get install -y -qq curl git ca-certificates sudo npm >/dev/null
+note 'curl, git, ca-certificates, sudo, npm'
 note 'Le reste appartient à la plateforme : la session l’installera elle-même.'
 
 # ------------------------------------------------------------------ 3. compte
@@ -246,6 +254,27 @@ note "jeton Claude dans $ENV_FILE, 0600, root seulement"
 
 unset claude_token github_token
 
+# ------------------------------------------------------------ 7. le relecteur
+
+# AVANT le superviseur, et ce n'est pas décoratif : le superviseur démarre en
+# enchaînant, et « sur revue absente : enchaîner » fait passer un cycle non
+# relu sans un mot. Une usine dont le relecteur arrive après le lanceur livre
+# du code que personne n'a lu, et rien dans les traces ne le signale.
+#
+# « codex.sh apply » ne se connecte pas et ne peut pas : approuver un code
+# d'appareil, c'est prouver une identité, et un processus sans humain ne le
+# fait pas. Il pose l'outil épinglé, un compte sans pouvoir, un CODEX_HOME —
+# puis il IMPRIME la commande de connexion. On la relaie telle qu'il la donne,
+# on ne la réécrit pas ici : deux formulations de la même commande finiraient
+# par diverger.
+#
+# Un échec ici arrête l'amorce, exprès. Une usine sans relecteur est le défaut
+# qu'on vient de décrire, pas une installation partielle acceptable.
+title 'Relecteur'
+bash "$REPO_DIR/install/codex.sh" apply
+
+# ------------------------------------------------------------- 8. le lanceur
+
 # « superviseur.sh » et NON « service.sh » : ce dernier pose
 # « daubercy-cycle.service », la VEILLE, remplacée par le superviseur le
 # 2026-09-18. Une machine amorcée avec l'ancien script démarrait le lanceur
@@ -265,17 +294,28 @@ printf '\n'
 note 'Le superviseur lit work/*.md, lance UN cycle, le fait relire, instruit'
 note 'les objections, puis passe au suivant. Les consignes arrivent par Git.'
 
+title 'Il reste UN geste humain, et un seul'
+say 'Le relecteur est posé mais pas connecté. « codex.sh apply » vient'
+say 'd’imprimer la commande exacte, plus haut : elle affiche un code court à'
+say 'approuver depuis un autre appareil. Un processus sans humain ne peut pas'
+say 'prouver une identité — c’est la seule chose que cette amorce ne peut pas'
+say 'faire à ta place.'
+printf '\n'
+say 'TANT QUE CE GESTE N’EST PAS FAIT, le labo tourne SANS relecture : la règle'
+say '« sur revue absente : enchaîner » laisse passer chaque cycle, sans erreur'
+say 'et sans avertissement. C’est le comportement prévu, et c’est pourquoi'
+say 'c’est écrit ici plutôt que découvert plus tard.'
+printf '\n'
+note "Vérifier             sudo bash $REPO_DIR/install/codex.sh doctor"
+note "                     sudo bash $REPO_DIR/install/superviseur.sh doctor"
+
 title 'Ce que cette amorce n’a PAS fait'
-say "Elle monte la machine de travail de l'agent. Elle n'installe pas le labo."
+say "Elle monte l'usine — l'agent, le relecteur, le lanceur. Elle n'installe"
+say 'pas le labo lui-même.'
 printf '\n'
 note "Le labo               sudo bash $REPO_DIR/install/all.sh apply"
 note '                      PostgreSQL, la plateforme, la passerelle, Jenkins,'
 note '                      le panneau — et leurs prérequis Debian.'
-printf '\n'
-say 'Un étage mérite d’être nommé ici : « codex », le RELECTEUR que le'
-say 'superviseur appelle. Sans lui, la règle « sur revue absente : enchaîner »'
-say 's’applique à chaque cycle et le labo livre du code que personne n’a relu.'
-say 'Ça ne se voit dans aucun message d’erreur — c’est le comportement prévu.'
 
 if ((en_clair)); then
   title 'Un dernier geste'
